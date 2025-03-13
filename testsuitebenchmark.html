@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benchmarks</title>
+    <link rel="stylesheet" href="testsuitebenchmark.css">
+</head>
+
+<body>
+    <h1>Benchmarks</h1>
+    <div class="comparison-container">
+        <div>
+            <label for="date-select">Current Dataset:</label>
+            <select id="date-select"></select>
+        </div>
+        <div>
+            <label for="compare-select">Compare With:</label>
+            <select id="compare-select">
+                <option value="">None</option>
+            </select>
+        </div>
+    </div>
+    <div id="summary-info"></div>
+    <h2>Summary Table</h2>
+    <table class="summary-table" id="summary-table">
+        <thead>
+            <tr>
+                <th>Component</th>
+                <th>Valid</th>
+                <th>Error</th>
+                <th>Timeout</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <div id="dataset-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Files Explorer</h2>
+                <div class="search-container">
+                    <input type="text" id="global-search" placeholder="Search files..." class="search-input">
+                    <button id="clear-search" class="clear-search" title="Clear search">×</button>
+                </div>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="left-panel">
+                    <h3>Datasets</h3>
+                    <ul id="dataset-list"></ul>
+                </div>
+                <div class="right-panel">
+                    <div id="files-container">
+                        <h3>Files</h3>
+                        <ul id="files-list"></ul>
+                    </div>
+                    <div id="search-results" class="search-results hidden">
+                        <h3>Search Results <span id="result-count">0</span></h3>
+                        <ul id="results-list"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="file-details">
+        <h2>File Details</h2>
+        <div class="file-info-grid">
+            <div class="file-info">
+                <div id="file-name"></div>
+            </div>
+            <div class="performance-section">
+                <h3>Performance</h3>
+                <div id="performance-data"></div>
+            </div>
+            <div class="quality-section">
+                <h3>Quality</h3>
+                <div id="quality-data"></div>
+            </div>
+            <div class="robustness-section">
+                <h3>Robustness</h3>
+                <div id="robustness-data"></div>
+            </div>
+        </div>
+    </div>
+    <script src="testsuitebenchmark.js"></script>
+</body>
+
+</html>
