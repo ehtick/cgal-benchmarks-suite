@@ -22,6 +22,7 @@ WORKDIR /app
 RUN mkdir -p /app/CGAL /app/data /app/benchmark /app/results
 
 COPY benchmarkingtestsuite.sh /app/
+COPY process_benchmark_data.py /app/
 
 RUN chmod +x /app/benchmarkingtestsuite.sh
 

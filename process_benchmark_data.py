@@ -1,145 +1,179 @@
+#!/usr/bin/env python3
 import os
 import json
-import sys
+import argparse
 from datetime import datetime
+import importlib.util
 
 def parse_file(filepath, num_lines):
-    """Reads specific number of lines from a file and returns them as a list."""
-    with open(filepath, 'r', encoding='utf-8') as file:
-        return [file.readline().strip() for _ in range(num_lines)]
+    try:
+        with open(filepath, 'r', encoding='utf-8') as file:
+            return [file.readline().strip() for _ in range(num_lines)]
+    except FileNotFoundError:
+        print(f"Warning: File not found - {filepath}")
+        return ["N/A"] * num_lines
+    except Exception as e:
+        print(f"Error reading file {filepath}: {e}")
+        return ["ERROR"] * num_lines
 
-def create_json_output(json_output):
+def create_json_output(json_output, component):
     os.makedirs(json_output, exist_ok=True)
-    output_file = os.path.join(json_output, f"results_{datetime.now().strftime('%Y-%m-%d')}.json")
-    json_output = {"Alpha_wrap_3": {}}
-    with open(output_file, 'w', encoding='utf-8') as json_file:
-        json.dump(json_output, json_file, indent=4)
+    output_file = os.path.join(json_output, f"{component}_results_{datetime.now().strftime('%Y-%m-%d')}.json")
+    
+    if not os.path.exists(output_file):
+        json_data = {component: {}}
+        with open(output_file, 'w', encoding='utf-8') as json_file:
+            json.dump(json_data, json_file, indent=4)
+    
     return output_file
 
-def update_json_output(output_file,
-                       parent_dirs,
-                       file_name,
-                       performance_data,
-                       quality_data,
-                       robustness_data):
-    if os.path.exists(output_file):
+def update_json_output(output_file, component, parent_dirs, file_name, metrics_data):
+    try:
         with open(output_file, 'r', encoding='utf-8') as json_file:
             json_output = json.load(json_file)
-    else:
-        json_output = {"Alpha_wrap_3": {}}
+    except (FileNotFoundError, json.JSONDecodeError):
+        json_output = {component: {}}
+    
+    if component not in json_output:
+        json_output[component] = {}
+    
     top_level_dir = parent_dirs[0] if parent_dirs else ""
     relative_path = os.path.join(*parent_dirs[1:]) if len(parent_dirs) > 1 else ""
     if relative_path:
         relative_path += "/"
-    if top_level_dir not in json_output["Alpha_wrap_3"]:
-        json_output["Alpha_wrap_3"][top_level_dir] = {}
+    
+    if top_level_dir not in json_output[component]:
+        json_output[component][top_level_dir] = {}
 
-    json_output["Alpha_wrap_3"][top_level_dir][file_name] = {
+    json_output[component][top_level_dir][file_name] = {
         "path": relative_path,
-        "Performance": performance_data,
-        "Quality": quality_data,
-        "Robustness": robustness_data
+        **metrics_data
     }
 
     with open(output_file, 'w', encoding='utf-8') as json_file:
         json.dump(json_output, json_file, indent=4)
 
-def get_performance(file, output_dir, latest_commit):
-    filepath = os.path.join(output_dir, "Performance", "results", latest_commit, f"{file}.log")
-    seconds, memory_peaks = parse_file(filepath, 2)
-    performance_data = {
-        "seconds": seconds,
-        "memory_peaks": memory_peaks
-    }
-    return performance_data
+def get_component_metrics(component, file_name, output_dir, commit_hash):
+    metrics = {}
+    
+    metric_types = ["Performance", "Quality", "Robustness"]
+    
+    for metric_type in metric_types:
+        metric_path = os.path.join(output_dir, metric_type, "results", commit_hash, f"{file_name}.log")
+        
+        if os.path.exists(metric_path):
+            processor_name = f"{component.lower()}_processor"
+            processor_path = os.path.join(os.path.dirname(__file__), f"{processor_name}.py")
+            
+            if os.path.exists(processor_path):
+                spec = importlib.util.spec_from_file_location(processor_name, processor_path)
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                
+                if hasattr(module, f"get_{metric_type.lower()}"):
+                    processor_func = getattr(module, f"get_{metric_type.lower()}")
+                    metrics[metric_type] = processor_func(file_name, output_dir, commit_hash)
+            else:
+                if metric_type == "Performance":
+                    metrics[metric_type] = process_performance(metric_path)
+                elif metric_type == "Quality":
+                    metrics[metric_type] = process_quality(metric_path)
+                elif metric_type == "Robustness":
+                    metrics[metric_type] = process_robustness(metric_path)
+    
+    return metrics
 
-def get_quality(file, output_dir, latest_commit):
-    filepath = os.path.join(output_dir, "Quality", "results", latest_commit, f"{file}.log")
-    (
-        mean_min_angle,
-        mean_max_angle,
-        mean_radius_ratio,
-        mean_edge_ratio,
-        mean_aspect_ratio,
-        complexity,
-        almost_degenerate_triangles,
-        hausdorff_distance
-    ) = parse_file(filepath, 8)
-    quality_data = {
-        "Mean_Min_Angle_(degree)": mean_min_angle,
-        "Mean_Max_Angle_(degree)": mean_max_angle,
-        "Mean_Radius_Ratio": mean_radius_ratio,
-        "Mean_Edge_Ratio": mean_edge_ratio,
-        "Mean_Aspect_Ratio": mean_aspect_ratio,
-        "Complexity_(#_of_triangle)": complexity,
-        "#_of_almost_degenerate_triangle": almost_degenerate_triangles,
-        "Hausdorff_distance_output_to_input_(%_of_bbox_diag)": hausdorff_distance
-    }
-    return quality_data
+def process_performance(filepath):
+    try:
+        lines = parse_file(filepath, 2)
+        return {
+            "seconds": lines[0],
+            "memory_peaks": lines[1]
+        }
+    except Exception as e:
+        print(f"Error processing performance data: {e}")
+        return {"error": str(e)}
 
-def get_robustness(file, output_dir, latest_commit):
-    filepath = os.path.join(output_dir, "Robustness", "results", latest_commit, f"{file}.log")
-    robustness_flag = parse_file(filepath, 1)[0]
-    robustness_flags_template = {
-        "VALID_SOLID_OUTPUT": 0,
-        "INPUT_IS_INVALID": 0,
-        "OUTPUT_IS_NOT_TRIANGLE_MESH": 0,
-        "OUTPUT_IS_COMBINATORIAL_NON_MANIFOLD": 0,
-        "OUTPUT_HAS_BORDERS": 0,
-        "OUTPUT_HAS_DEGENERATED_FACES": 0,
-        "OUTPUT_HAS_GEOMETRIC_SELF_INTERSECTIONS": 0,
-        "OUTPUT_DOES_NOT_BOUND_VOLUME": 0,
-        "OUTPUT_DOES_NOT_CONTAIN_INPUT": 0,
-        "OUTPUT_DISTANCE_IS_TOO_LARGE": 0,
-        "SIGSEGV": 0,
-        "SIGABRT": 0,
-        "SIGFPE": 0,
-        "TIMEOUT": 0,
-    }
-    if robustness_flag in robustness_flags_template:
-        robustness_flags_template[robustness_flag] = 1
-    robustness_data = {key: value for key, value in robustness_flags_template.items() if value == 1}
-    return robustness_data
+def process_quality(filepath):
+    try:
+        lines = parse_file(filepath, 10)
+        
+        quality_data = {}
+        for i, line in enumerate(lines):
+            if line and line != "N/A" and line != "ERROR":
+                quality_data[f"metric_{i+1}"] = line
+        
+        return quality_data
+    except Exception as e:
+        print(f"Error processing quality data: {e}")
+        return {"error": str(e)}
 
-def process_benchmark_files(off_files, output_dir, latest_commit, output_file):
-    for off_file in off_files:
-        parent_dir, file_name = os.path.split(off_file)
-        file_name = os.path.splitext(file_name)[0]
-        parent_dirs = parent_dir.split(os.sep)
-        parent_dirs = [d for d in parent_dirs if d]
-        performance_data = get_performance(file_name, output_dir, latest_commit)
-        quality_data = get_quality(file_name, output_dir, latest_commit)
-        robustness_data = get_robustness(file_name, output_dir, latest_commit)
-        update_json_output(output_file,
-                           parent_dirs,
-                           file_name,
-                           performance_data,
-                           quality_data,
-                           robustness_data)
+def process_robustness(filepath):
+    try:
+        lines = parse_file(filepath, 1)
+        return {"status": lines[0]}
+    except Exception as e:
+        print(f"Error processing robustness data: {e}")
+        return {"error": str(e)}
 
-def main(json_output, output_dir, data_folder, latest_commit):
+def process_single_file(file_path, input_folder, output_dir, json_output, commit_hash, component):
+    relative_path = os.path.relpath(file_path, input_folder)
+    parent_dir, file_name = os.path.split(relative_path)
+    file_name = os.path.splitext(file_name)[0]
+    parent_dirs = parent_dir.split(os.sep)
+    parent_dirs = [d for d in parent_dirs if d]
+    
+    metrics_data = get_component_metrics(component, file_name, output_dir, commit_hash)
+    
+    output_file = os.path.join(json_output, f"{component}_results_{datetime.now().strftime('%Y-%m-%d')}.json")
+    update_json_output(output_file, component, parent_dirs, file_name, metrics_data)
+
+def process_all_files(input_folder, output_dir, json_output, commit_hash, component):
     valid_extensions = {
         '.off', '.obj', '.ply', '.stl', '.STL', '.ts', '.vtp'
     }
 
     all_files = []
-    for root, _, files in os.walk(data_folder):
+    for root, _, files in os.walk(input_folder):
         for file in files:
             _, ext = os.path.splitext(file)
             if ext.lower() in [ext.lower() for ext in valid_extensions]:
-                relative_path = os.path.relpath(os.path.join(root, file), data_folder)
-                all_files.append(relative_path)
+                file_path = os.path.join(root, file)
+                process_single_file(file_path, input_folder, output_dir, json_output, commit_hash, component)
 
-    output_file = create_json_output(json_output)
-    process_benchmark_files(all_files, output_dir, latest_commit, output_file)
+def main():
+    parser = argparse.ArgumentParser(description='Process benchmark data for CGAL components')
+    parser.add_argument('--json-output', required=True, help='Directory for JSON output')
+    parser.add_argument('--output-dir', required=True, help='Directory with benchmark results')
+    parser.add_argument('--input-folder', help='Input data folder')
+    parser.add_argument('--input-file', help='Single input file to process')
+    parser.add_argument('--commit', required=True, help='Hash of the latest commit')
+    parser.add_argument('--component', required=True, help='Component name')
+    parser.add_argument('--init-only', action='store_true', help='Only initialize JSON file')
+    parser.add_argument('--single-file', action='store_true', help='Process a single file')
+    
+    args = parser.parse_args()
+    
+    output_file = create_json_output(args.json_output, args.component)
+    
+    if args.init_only:
+        print(f"JSON file initialized for {args.component}: {output_file}")
+        return
+    
+    if args.single_file and args.input_file:
+        print(f"Processing single file for {args.component}: {args.input_file}")
+        process_single_file(args.input_file, args.input_folder, args.output_dir, 
+                           args.json_output, args.commit, args.component)
+    elif args.input_folder:
+        print(f"Processing all files for {args.component} in: {args.input_folder}")
+        process_all_files(args.input_folder, args.output_dir, args.json_output, 
+                         args.commit, args.component)
+    else:
+        print("Error: Either --input-folder or (--single-file and --input-file) must be provided")
+        return 1
+    
+    print(f"Processing complete for {args.component}")
+    return 0
 
 if __name__ == "__main__":
-    if len(sys.argv) != 5:
-        print("Usage: process_benchmark_data.py \
-<Json_Output> <Output_results> <Input_data_folder> <Hash_latest_commit>")
-        sys.exit(1)
-    Json_output = sys.argv[1]
-    Output_results = sys.argv[2]
-    Input_data_folder = sys.argv[3]
-    Hash_latest_commit = sys.argv[4]
-    main(Json_output, Output_results, Input_data_folder, Hash_latest_commit)
+    main()
