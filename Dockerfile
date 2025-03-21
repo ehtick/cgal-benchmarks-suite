@@ -19,14 +19,14 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-RUN mkdir -p /app/CGAL /app/data /app/benchmark /app/results
+RUN mkdir -p /app/CGAL /app/data /app/benchmark /app/results /app/scripts /app/build
 
-COPY benchmarkingtestsuite.sh /app/
-COPY process_benchmark_data.py /app/
+COPY benchmarkingtestsuite.sh /app/scripts/
+COPY process_benchmark_data.py /app/scripts/
+COPY Alpha_wrap_3_processor.py /app/scripts/
 
-RUN chmod +x /app/benchmarkingtestsuite.sh
+RUN chmod +x /app/scripts/benchmarkingtestsuite.sh
 
 VOLUME ["/app/CGAL", "/app/data", "/app/benchmark"]
-
 SHELL ["/bin/bash", "-c"]
 CMD ["/bin/bash"]
