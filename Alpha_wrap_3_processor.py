@@ -12,8 +12,8 @@ def parse_file(filepath, num_lines):
         print(f"Error reading file {filepath}: {e}")
         return ["ERROR"] * num_lines
 
-def get_performance(file_name, output_dir, commit_hash):
-    filepath = os.path.join(output_dir, "Performance", "results", commit_hash, f"{file_name}.log")
+def get_performance(file_name, output_dir):
+    filepath = os.path.join(output_dir, "Performance", "results", f"{file_name}.log")
     seconds, memory_peaks = parse_file(filepath, 2)
     performance_data = {
         "seconds": seconds,
@@ -21,8 +21,8 @@ def get_performance(file_name, output_dir, commit_hash):
     }
     return performance_data
 
-def get_quality(file_name, output_dir, commit_hash):
-    filepath = os.path.join(output_dir, "Quality", "results", commit_hash, f"{file_name}.log")
+def get_quality(file_name, output_dir):
+    filepath = os.path.join(output_dir, "Quality", "results", f"{file_name}.log")
     (
         mean_min_angle,
         mean_max_angle,
@@ -45,8 +45,8 @@ def get_quality(file_name, output_dir, commit_hash):
     }
     return quality_data
 
-def get_robustness(file_name, output_dir, commit_hash):
-    filepath = os.path.join(output_dir, "Robustness", "results", commit_hash, f"{file_name}.log")
+def get_robustness(file_name, output_dir):
+    filepath = os.path.join(output_dir, "Robustness", "results", f"{file_name}.log")
     robustness_flag = parse_file(filepath, 1)[0]
     robustness_flags_template = {
         "VALID_SOLID_OUTPUT": 0,

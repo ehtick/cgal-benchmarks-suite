@@ -53,13 +53,13 @@ def update_json_output(output_file, component, parent_dirs, file_name, metrics_d
     with open(output_file, 'w', encoding='utf-8') as json_file:
         json.dump(json_output, json_file, indent=4)
 
-def get_component_metrics(component, file_name, output_dir, commit_hash):
+def get_component_metrics(component, file_name, output_dir):
     metrics = {}
     
     metric_types = ["Performance", "Quality", "Robustness"]
     
     for metric_type in metric_types:
-        metric_path = os.path.join(output_dir, metric_type, "results", commit_hash, f"{file_name}.log")
+        metric_path = os.path.join(output_dir, metric_type, "results", f"{file_name}.log")
         
         if os.path.exists(metric_path):
             processor_name = f"{component.lower()}_processor"
@@ -72,7 +72,7 @@ def get_component_metrics(component, file_name, output_dir, commit_hash):
                 
                 if hasattr(module, f"get_{metric_type.lower()}"):
                     processor_func = getattr(module, f"get_{metric_type.lower()}")
-                    metrics[metric_type] = processor_func(file_name, output_dir, commit_hash)
+                    metrics[metric_type] = processor_func(file_name, output_dir)
             else:
                 if metric_type == "Performance":
                     metrics[metric_type] = process_performance(metric_path)
@@ -140,19 +140,19 @@ def process_robustness(filepath):
         print(f"Error processing robustness data: {e}")
         return {"error": str(e)}
 
-def process_single_file(file_path, input_folder, output_dir, json_output, commit_hash, component):
+def process_single_file(file_path, input_folder, output_dir, json_output, component):
     relative_path = os.path.relpath(file_path, input_folder)
     parent_dir, file_name = os.path.split(relative_path)
     file_name = os.path.splitext(file_name)[0]
     parent_dirs = parent_dir.split(os.sep)
     parent_dirs = [d for d in parent_dirs if d]
     
-    metrics_data = get_component_metrics(component, file_name, output_dir, commit_hash)
+    metrics_data = get_component_metrics(component, file_name, output_dir)
     
     output_file = os.path.join(json_output, f"{component}_results_{datetime.now().strftime('%Y-%m-%d')}.json")
     update_json_output(output_file, component, parent_dirs, file_name, metrics_data)
 
-def process_all_files(input_folder, output_dir, json_output, commit_hash, component):
+def process_all_files(input_folder, output_dir, json_output, component):
     valid_extensions = {
         '.off', '.obj', '.ply', '.stl', '.STL', '.ts', '.vtp'
     }
@@ -163,7 +163,7 @@ def process_all_files(input_folder, output_dir, json_output, commit_hash, compon
             _, ext = os.path.splitext(file)
             if ext.lower() in [ext.lower() for ext in valid_extensions]:
                 file_path = os.path.join(root, file)
-                process_single_file(file_path, input_folder, output_dir, json_output, commit_hash, component)
+                process_single_file(file_path, input_folder, output_dir, json_output, component)
 
 def main():
     parser = argparse.ArgumentParser(description='Process benchmark data for CGAL components')
@@ -171,7 +171,6 @@ def main():
     parser.add_argument('--output-dir', required=True, help='Directory with benchmark results')
     parser.add_argument('--input-folder', help='Input data folder')
     parser.add_argument('--input-file', help='Single input file to process')
-    parser.add_argument('--commit', required=True, help='Hash of the latest commit')
     parser.add_argument('--component', required=True, help='Component name')
     parser.add_argument('--init-only', action='store_true', help='Only initialize JSON file')
     parser.add_argument('--single-file', action='store_true', help='Process a single file')
@@ -187,11 +186,11 @@ def main():
     if args.single_file and args.input_file:
         print(f"Processing single file for {args.component}: {args.input_file}")
         process_single_file(args.input_file, args.input_folder, args.output_dir, 
-                           args.json_output, args.commit, args.component)
+                           args.json_output, args.component)
     elif args.input_folder:
         print(f"Processing all files for {args.component} in: {args.input_folder}")
         process_all_files(args.input_folder, args.output_dir, args.json_output, 
-                         args.commit, args.component)
+                         args.component)
     else:
         print("Error: Either --input-folder or (--single-file and --input-file) must be provided")
         return 1

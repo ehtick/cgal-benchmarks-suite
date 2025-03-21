@@ -3,9 +3,8 @@ CGAL_directory=$1
 Input_data_folder=$2
 Output_directory=$3
 Num_threads=$4
-Commit_hash=$5
-Timeout=$6
-shift 6
+Timeout=$5
+shift 5
 
 Current_directory="/app/scripts"
 Components=("$@")
@@ -50,7 +49,6 @@ for component in "${Components[@]}"; do
         --json-output "$Json_Output" \
         --output-dir "$Benchmark_Output" \
         --input-folder "$Input_data_folder" \
-        --commit "$Commit_hash" \
         --component "$component" \
         --init-only
 done
@@ -97,7 +95,6 @@ for file in "${all_files[@]}"; do
             "$alpha_value" \
             "$timeout_value" \
             "$Num_threads" \
-            "$Commit_hash" \
             --single-file
 
         python3 "$Current_directory/process_benchmark_data.py" \
@@ -105,7 +102,6 @@ for file in "${all_files[@]}"; do
             --output-dir "$Benchmark_Output" \
             --input-file "$file" \
             --input-folder "$Input_data_folder" \
-            --commit "$Commit_hash" \
             --component "$component" \
             --single-file
     done
