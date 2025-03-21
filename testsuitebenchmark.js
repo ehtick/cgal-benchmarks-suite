@@ -1,44 +1,96 @@
 document.addEventListener("DOMContentLoaded", () => {
     const dateSelect = document.getElementById("date-select");
     const compareSelect = document.getElementById("compare-select");
-    let jsonData = null;
-    let compareData = null;
+    let jsonData = {};
+    let compareData = {};
     let allDatasets = [];
     let allFiles = [];
+    let availableComponents = [];
 
     async function fetchBenchmarkFiles() {
         try {
-            const response = await fetch("benchmark/");
+            const response = await fetch("benchmark/json_results/");
             const text = await response.text();
             return parseFileLinks(text);
         } catch (error) {
             console.error("Error fetching JSON files:", error);
-            return [];
+            return {};
         }
     }
 
     function parseFileLinks(htmlText) {
         const doc = new DOMParser().parseFromString(htmlText, "text/html");
-        return Array.from(doc.querySelectorAll("a"))
+        const files = Array.from(doc.querySelectorAll("a"))
             .map(link => link.getAttribute("href"))
-            .filter(href => href.endsWith(".json"));
+            .filter(href => href.includes("_results_") && href.endsWith(".json"));
+        const filesByDate = {};
+        files.forEach(file => {
+            const datePart = file.match(/(\d{4}-\d{2}-\d{2})/);
+            if (datePart) {
+                const date = datePart[1];
+                if (!filesByDate[date]) {
+                    filesByDate[date] = [];
+                }
+                filesByDate[date].push(file);
+            }
+        });
+        
+        return filesByDate;
     }
 
-    async function loadJSON(file, isCompare = false) {
+    async function loadJSONsByDate(selectedDate, isCompare = false) {
+        const target = isCompare ? compareData : jsonData;
         try {
-            const response = await fetch(file);
-            const data = await response.json();
-            if (isCompare) {
-                compareData = data;
-                if (jsonData) {
-                    updateSummaryTable(jsonData, compareData);
+            if (target) {
+                Object.keys(target).forEach(key => delete target[key]);
+            }
+            const files = await fetchBenchmarkFiles();
+            if (!files || !files[selectedDate]) {
+                console.error(`No files found for date: ${selectedDate}`);
+                return;
+            }
+            const filesForDate = files[selectedDate] || [];
+            if (filesForDate.length === 0) {
+                console.warn(`Empty file list for date: ${selectedDate}`);
+                return;
+            }
+            const promises = filesForDate.map(async (file) => {
+                try {
+                    const response = await fetch(file);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    const data = await response.json();
+                    if (!data) {
+                        console.error(`Empty or invalid JSON in file: ${file}`);
+                        return;
+                    }
+                    const filenameMatch = file.match(/([^\/]+)_results_/);
+                    if (filenameMatch && filenameMatch[1]) {
+                        const componentName = filenameMatch[1];
+                        if (data[componentName]) {
+                            target[componentName] = data[componentName];
+                        } else {
+                            target[componentName] = data;
+                        }
+                        if (!isCompare && !availableComponents.includes(componentName)) {
+                            availableComponents.push(componentName);
+                        }
+                    } else {
+                        console.error(`Could not extract component name from file: ${file}`);
+                    }
+                } catch (error) {
+                    console.error(`Error loading JSON file: ${file}`, error);
                 }
+            });
+            await Promise.all(promises);
+            if (Object.keys(target).length > 0) {
+                updateSummaryTable(jsonData, Object.keys(compareData).length > 0 ? compareData : null);
             } else {
-                jsonData = data;
-                updateSummaryTable(jsonData, compareData);
+                console.warn(`No valid data loaded for date: ${selectedDate}`);
             }
         } catch (error) {
-            console.error("Error loading JSON file:", file, error);
+            console.error("Error loading JSON files for date:", selectedDate, error);
         }
     }
 
@@ -886,31 +938,41 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     dateSelect.addEventListener("change", () => {
-        loadJSON(dateSelect.value);
+        loadJSONsByDate(dateSelect.value);
         if (compareSelect.value && compareSelect.value !== dateSelect.value) {
-            loadJSON(compareSelect.value, true);
+            loadJSONsByDate(compareSelect.value, true);
         } else {
-            compareData = null;
+            Object.keys(compareData).forEach(key => delete compareData[key]);
             updateSummaryTable(jsonData);
         }
     });
 
     compareSelect.addEventListener("change", () => {
         if (compareSelect.value && compareSelect.value !== dateSelect.value) {
-            loadJSON(compareSelect.value, true);
+            loadJSONsByDate(compareSelect.value, true);
         } else {
-            compareData = null;
+            Object.keys(compareData).forEach(key => delete compareData[key]);
             updateSummaryTable(jsonData);
         }
     });
 
-    fetchBenchmarkFiles().then(files => {
-        const sortedFiles = files.sort().reverse();
-        if (files.length) {
-            const selectOptions = sortedFiles.map(file => `<option value="${file}">${file}</option>`).join("");
-            dateSelect.innerHTML = selectOptions;
-            compareSelect.innerHTML = `<option value="">None</option>${selectOptions}`;
-            loadJSON(dateSelect.value);
+    fetchBenchmarkFiles().then(filesByDate => {
+        if (!filesByDate) {
+            console.error("Failed to fetch benchmark files");
+            return;
         }
+        const sortedDates = Object.keys(filesByDate).sort().reverse();
+        if (sortedDates.length) {
+            const dateOptions = sortedDates.map(date => `<option value="${date}">${date}</option>`).join("");
+            dateSelect.innerHTML = dateOptions;
+            compareSelect.innerHTML = `<option value="">None</option>${dateOptions}`;
+            if (sortedDates[0]) {
+                loadJSONsByDate(sortedDates[0]);
+            }
+        } else {
+            console.warn("No benchmark files found");
+        }
+    }).catch(error => {
+        console.error("Error initializing benchmark viewer:", error);
     });
 });

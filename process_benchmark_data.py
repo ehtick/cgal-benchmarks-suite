@@ -111,7 +111,31 @@ def process_quality(filepath):
 def process_robustness(filepath):
     try:
         lines = parse_file(filepath, 1)
-        return {"status": lines[0]}
+        robustness_flag = lines[0]
+
+        robustness_flags = {
+            "VALID_SOLID_OUTPUT": 0,
+            "INPUT_IS_INVALID": 0,
+            "OUTPUT_IS_NOT_TRIANGLE_MESH": 0,
+            "OUTPUT_IS_COMBINATORIAL_NON_MANIFOLD": 0,
+            "OUTPUT_HAS_BORDERS": 0,
+            "OUTPUT_HAS_DEGENERATED_FACES": 0,
+            "OUTPUT_HAS_GEOMETRIC_SELF_INTERSECTIONS": 0,
+            "OUTPUT_DOES_NOT_BOUND_VOLUME": 0,
+            "OUTPUT_DOES_NOT_CONTAIN_INPUT": 0,
+            "OUTPUT_DISTANCE_IS_TOO_LARGE": 0,
+            "SIGSEGV": 0,
+            "SIGABRT": 0,
+            "SIGFPE": 0,
+            "TIMEOUT": 0
+        }
+
+        if robustness_flag in robustness_flags:
+            robustness_flags[robustness_flag] = 1
+
+        result = {key: value for key, value in robustness_flags.items() if value == 1}
+
+        return result
     except Exception as e:
         print(f"Error processing robustness data: {e}")
         return {"error": str(e)}
