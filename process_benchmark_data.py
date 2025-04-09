@@ -2,8 +2,14 @@
 import os
 import json
 import argparse
+import signal
+import sys
 from datetime import datetime
 import importlib.util
+
+def signal_handler(signum, frame):
+    print("\nReceived signal, clean finalization...")
+    sys.exit(0)
 
 def parse_file(filepath, num_lines):
     try:
@@ -166,6 +172,8 @@ def process_all_files(input_folder, output_dir, json_output, component):
                 process_single_file(file_path, input_folder, output_dir, json_output, component)
 
 def main():
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
     parser = argparse.ArgumentParser(description='Process benchmark data for CGAL components')
     parser.add_argument('--json-output', required=True, help='Directory for JSON output')
     parser.add_argument('--output-dir', required=True, help='Directory with benchmark results')

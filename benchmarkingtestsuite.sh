@@ -31,9 +31,9 @@ rm -f "$STOP_FILE"
 touch "$RUNNING_FILE"
 
 echo "=== [BENCHMARK LAUNCH] ==="
-echo "CGAL directory     : $1"
-echo "Input data folder  : $2"
-echo "Output directory   : $3"
+echo "CGAL directory     : $CGAL_directory"
+echo "Input data folder  : $Input_data_folder"
+echo "Output directory   : $Output_directory"
 echo "Threads            : $Num_threads"
 echo "Timeout            : $Timeout"
 echo "---------------------------------------"
@@ -115,7 +115,7 @@ done
 
 valid_extensions=(".off" ".obj" ".ply" ".stl" ".STL" ".ts" ".vtp")
 
-echo "=== [BENCHMARK LOOP] ==="
+echo "=== [BENCHMARK LOOP - PARALLEL MODE] ==="
 
 for component in "${Components[@]}"; do
     check_stop
@@ -123,7 +123,7 @@ for component in "${Components[@]}"; do
 
     datasets=()
     if [[ -n "${ComponentDatasets[$component]}" ]]; then
-        IFS=' ' read -r -a datasets <<< "${ComponentDatasets[$component]}"
+        IFS=' ' read -r -a datasets <<<"${ComponentDatasets[$component]}"
     else
         datasets=(".")
     fi
@@ -136,32 +136,28 @@ for component in "${Components[@]}"; do
         mapfile -d '' -t all_files < <(find "$dataset_path" -type f -print0)
         echo "Found ${#all_files[@]} files in dataset."
 
-        for file in "${all_files[@]}"; do
-            check_stop
+        export CGAL_directory Benchmark_Output Timeout Num_threads Input_data_folder \
+            Json_Output Current_directory component alpha_value timeout_value FIX_SELINUX \
+            benchmark_script
+
+        benchmark_script="/app/scripts/benchmarking_${component}.sh"
+        alpha_value=${COMPONENT_CONFIGS["$component,alpha"]:-"0"}
+        timeout_value=${COMPONENT_CONFIGS["$component,timeout"]:-"60"}
+
+        parallel -j "$Num_threads" --line-buffer '
+            file="{}"
             extension="${file##*.}"
-            match=0
-            for valid_ext in "${valid_extensions[@]}"; do
-                if [[ ".${extension,,}" == "${valid_ext,,}" ]]; then
-                    match=1
+            valid=0
+            for ext in .off .obj .ply .stl .STL .ts .vtp; do
+                if [[ ".${extension,,}" == "${ext,,}" ]]; then
+                    valid=1
                     break
                 fi
             done
-            [ $match -eq 0 ] && continue
+            [ $valid -eq 0 ] && exit 0
 
             relative_path=$(realpath --relative-to="$Input_data_folder" "$file")
-            echo "Processing file: $relative_path"
-
-            alpha_value=${COMPONENT_CONFIGS["$component,alpha"]:-"0"}
-            timeout_value=${COMPONENT_CONFIGS["$component,timeout"]:-"60"}
-
-            benchmark_script="/app/scripts/benchmarking_${component}.sh"
-            if [ ! -f "$benchmark_script" ]; then
-                echo "!! Benchmark script not found: $benchmark_script. Skipping."
-                continue
-            fi
-
-            echo ">>> Running $benchmark_script"
-            export BUILD_DIR="/app/build/$component"
+            echo "[PID $$] >>> Processing $relative_path" >&2
 
             timeout "$Timeout" "$benchmark_script" \
                 "$CGAL_directory" \
@@ -172,7 +168,9 @@ for component in "${Components[@]}"; do
                 "$Num_threads" \
                 --single-file
 
-            echo ">>> Collecting metrics for $component"
+            if [ $? -ne 0 ]; then
+                echo "[PID $$] !!! Benchmark failed for $relative_path" >&2
+            fi
 
             python3 "$Current_directory/process_benchmark_data.py" \
                 --json-output "$Json_Output" \
@@ -182,12 +180,21 @@ for component in "${Components[@]}"; do
                 --component "$component" \
                 --single-file
 
+            if [ $? -ne 0 ]; then
+                echo "[PID $$] !!! Post-processing failed for $relative_path" >&2
+            fi
+
             if [ -f "$FIX_SELINUX" ]; then
                 bash "$FIX_SELINUX" "$Json_Output"
                 bash "$FIX_SELINUX" "$Benchmark_Output"
             fi
-        done
+
+            echo "[PID $$] Done with $relative_path" >&2
+        ' ::: "${all_files[@]}"
     done
+    output_file="$Json_Output/${component}_results_$(date '+%Y-%m-%d').json"
+    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    jq --arg finished_at "$timestamp" '.finished_at = $finished_at' "$output_file" > "${output_file}.tmp" && mv "${output_file}.tmp" "$output_file"
 done
 
 cleanup
