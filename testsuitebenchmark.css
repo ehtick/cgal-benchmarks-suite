@@ -663,3 +663,9 @@ select:focus {
 .hidden {
     display: none !important;
 }
+
+.finished-time {
+    font-style: italic;
+    color: #666;
+    margin-top: 5px;
+}

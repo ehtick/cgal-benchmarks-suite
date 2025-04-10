@@ -56,7 +56,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             const promises = filesForDate.map(async (file) => {
                 try {
-                    const response = await fetch(file);
+                    const response = await fetch(`benchmark/json_results/${file}`);
                     if (!response.ok) {
                         throw new Error(`HTTP error! Status: ${response.status}`);
                     }
@@ -86,6 +86,12 @@ document.addEventListener("DOMContentLoaded", () => {
             await Promise.all(promises);
             if (Object.keys(target).length > 0) {
                 updateSummaryTable(jsonData, Object.keys(compareData).length > 0 ? compareData : null);
+                const finishedAt = Object.values(jsonData).find(c => c.finished_at)?.finished_at;
+                if (finishedAt) {
+                    document.getElementById("benchmark-finished-time").textContent = `Finished At: ${finishedAt}`;
+                } else {
+                    document.getElementById("benchmark-finished-time").textContent = `Finished At: (not recorded)`;
+                }
             } else {
                 console.warn(`No valid data loaded for date: ${selectedDate}`);
             }
