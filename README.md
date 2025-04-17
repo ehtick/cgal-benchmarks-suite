@@ -4,7 +4,7 @@ To add the benchmark section for your component, follow the guidelines below to 
 
 ## Output Directory Structure
 
-The following structure describes the **expected output directories** after running the benchmarks. Developers are free to organize their component's internal structure as they see fit, as long as the required benchmark scripts are present and produce the expected outputs.
+The following structure describes the expected output directories after running the benchmarks. Developers are free to organize their component's internal structure as they see fit, as long as the required benchmark scripts are present and produce the expected outputs.
 
 ```
 Output/
@@ -55,7 +55,7 @@ Run the component with a set of input files.
 
 ## Script Parameters
 
-The benchmarking scripts accept the following parameters:
+The benchmarking process is orchestrated by a main script that coordinates the execution of the individual benchmark scripts (Performance, Robustness, Quality). This main script is responsible for managing the workflow and takes the following parameters:
 
 1. **Project Directory**: Path to the directory containing the project
 2. **Input Data Directory**: Path to the directory containing the input data files.
