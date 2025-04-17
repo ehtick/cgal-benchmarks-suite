@@ -2,21 +2,21 @@
 
 To add the benchmark section for your component, follow the guidelines below to structure your files and implement the necessary scripts.
 
-## Directory Structure
+## Output Directory Structure
+
+The following structure describes the **expected output directories** after running the benchmarks. Developers are free to organize their component's internal structure as they see fit, as long as the required benchmark scripts are present and produce the expected outputs.
 
 ```
-ComponentName/
-├── benchmark/
-│   ├──ComponentName/
-│   │  ├── Performance/
-│   │  │   ├── log/               # Logs for performance benchmarks
-│   │  │   └── results/           # Raw results for performance benchmarks
-│   │  ├── Quality/
-│   │  │   ├── log/               # Logs for quality benchmarks
-│   │  │   └── results/           # Raw results for quality benchmarks
-│   │  └── Robustness/
-│   │      ├── log/               # Logs for robustness benchmarks
-│   │      └── results/           # Raw results for robustness benchmarks
+Output/
+├── Performance/
+│   ├── log/               # Logs for performance benchmarks
+│   └── results/           # Raw results for performance benchmarks
+├── Quality/
+│   ├── log/               # Logs for quality benchmarks
+│   └── results/           # Raw results for quality benchmarks
+└── Robustness/
+    ├── log/               # Logs for robustness benchmarks
+    └── results/           # Raw results for robustness benchmarks
 ```
 
 ### Explanation of Subdirectories
