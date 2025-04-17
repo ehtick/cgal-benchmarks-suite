@@ -43,7 +43,7 @@ Run the component with a set of input files.
       - The second line represents the memory usage in KB.
   - Log details in `Performance/log/`.
 2. **Robustness Benchmark**:
-  - Check exit codes and log results.
+  - Check exit codes.
   - Store results in `Robustness/results/`.
     - Each input file generates a corresponding results file in the `results` directory.
   - Log details in `Robustness/log/`.
