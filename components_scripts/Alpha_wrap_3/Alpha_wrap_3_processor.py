@@ -106,7 +106,10 @@ def main():
     parser.add_argument('--json-output', required=True, help='Path to output JSON file')
     args = parser.parse_args()
 
-    process_all_files(args.input_folder, args.output_dir, args.json_output)
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    json_output_path = f"{args.json_output}_{current_date}.json"
+
+    process_all_files(args.input_folder, args.output_dir, json_output_path)
     print(f"Results written to {args.json_output}")
 
 if __name__ == "__main__":

@@ -12,6 +12,7 @@ get_datetime() {
 
 setup_temp_directories() {
     TEMP_DIR=$(mktemp -d "/tmp/cgal-benchmark-$(date +%Y%m%d-%H%M%S)-XXXXXX")
+    chmod 777 "$TEMP_DIR"
     echo "Created temporary directory at: $TEMP_DIR"
 }
 
@@ -26,7 +27,7 @@ move_component_results() {
     local component=$1
     local component_temp_dir="$TEMP_DIR/$component"
 
-    mkdir -p "$Output_directory/logs/$component" "$Output_directory/json_results/$component"
+    mkdir -p "$Output_directory/logs/$component" "$Output_directory/json_results/$component" "$Output_directory/benchmark_output/$component"
 
     if [ -d "$component_temp_dir" ]; then
         echo "Moving results for component $component"
@@ -34,6 +35,11 @@ move_component_results() {
         # Move logs
         if [ -d "$component_temp_dir/logs" ] && [ "$(ls -A $component_temp_dir/logs)" ]; then
             mv "$component_temp_dir/logs/"* "$Output_directory/logs/$component/"
+        fi
+
+        # Move benchmark output
+        if [ -d "$component_temp_dir/benchmark_output" ] && [ "$(ls -A $component_temp_dir/benchmark_output)" ]; then
+            mv "$component_temp_dir/results/"* "$Output_directory/benchmark_output/$component/"
         fi
 
         # Move JSON results
@@ -74,14 +80,13 @@ run_component_benchmark() {
     done
 
     echo ">>> Starting benchmark for $component with $threads threads"
-    docker run -d --rm \
+    docker run -d --rm --replace \
         --name "cgal-benchmark-$component" \
-        -v "$TEMP_DIR/$component:/app/benchmark" \
+        -v "$TEMP_DIR/$component:/app/benchmark:z" \
         $volume_mounts \
         -e COMPONENT="$component" \
         -e THREADS="$threads" \
-        -e ARGUMENTS="$arguments" \
-        cgal-benchmark /bin/bash -c "$script;while true; do sleep 5; done"
+        cgal-benchmark /bin/bash -c "$script"
 }
 
 get_components() {

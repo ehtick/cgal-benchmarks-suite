@@ -59,7 +59,7 @@ BENCHMARK_SCRIPT="$Component_directory/benchmarking.sh"
 if [ -f "$BENCHMARK_SCRIPT" ]; then
     echo "Launching Alpha_wrap_3 benchmark script..."
 
-    bash "$BENCHMARK_SCRIPT" "$CGAL_directory" "$input_path/ovhData/Adalisk" "$output_dir" \
+    bash "$BENCHMARK_SCRIPT" "$CGAL_directory" "$input_path" "$output_dir" \
         "$alpha_value" "$timeout_value" "$virtual_thread" "a"
 
     if [ $? -ne 0 ]; then
@@ -72,7 +72,7 @@ if [ -f "$BENCHMARK_SCRIPT" ]; then
     python3 "/app/scripts/Alpha_wrap_3/Alpha_wrap_3_processor.py" \
         --json-output "/app/benchmark/json_results/Alpha_wrap_3_results.json" \
         --output-dir "$output_dir" \
-        --input-folder "$input_path/ovhData/Adalisk"
+        --input-folder "$input_path"
 
     chmod -R go+rw "/app/benchmark"
 else
