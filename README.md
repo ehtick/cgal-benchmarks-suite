@@ -33,7 +33,7 @@ Run the component with a set of input files.
 1. **Performance Benchmark**:
   - Measure time and memory usage.
   - Store results in `Performance/results/`.
-    - Each input file generates a corresponding `.log` file in the `results` directory. For example, running the benchmark on `34784.obj` will create a file `Performance/results/34784.log` containing:
+    - Each input file generates a corresponding results file in the `results` directory. For example, running the benchmark on `34784.obj` will create a file `Performance/results/34784.txt` containing:
       ```
       0.21
       17332
@@ -45,12 +45,12 @@ Run the component with a set of input files.
 2. **Robustness Benchmark**:
   - Check exit codes and log results.
   - Store results in `Robustness/results/`.
-    - Each input file generates a corresponding `.log` file in the `results` directory.
+    - Each input file generates a corresponding results file in the `results` directory.
   - Log details in `Robustness/log/`.
 3. **Quality Benchmark**:
   - Measure quality metrics.
   - Store results in `Quality/results/`.
-    - Each input file generates a corresponding `.log` file in the `results` directory.
+    - Each input file generates a corresponding results file in the `results` directory.
   - Log details in `Quality/log/`.
 
 ## Script Parameters
@@ -69,8 +69,10 @@ The benchmarking scripts accept the following parameters:
 ## Benchmark Details
 
 ### Performance Benchmark
-- Measures: time (seconds), Memory usage (KB)
-- Results are stored in `.log` files in the `Performance/results/` directory, with one file per input data file.
+- Measures:
+    - Execution time (seconds)
+    - Memory usage (KB)
+- Results are stored in files in the `Performance/results/` directory, with one file per input data file.
 
 ### Robustness Benchmark
 Exit codes :
