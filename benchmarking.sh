@@ -151,7 +151,7 @@ launch_container() {
     local component=$1
     local threads=$2
     local datasets=$(jq -r ".[\"$component\"].datasets[]" "$CONFIG_FILE" | tr '\n' ',')
-    local script=$(jq -r ".[\"$component\"].scripts" "$CONFIG_FILE")
+    local script=$(jq -r ".[\"$component\"].script" "$CONFIG_FILE")
     local arguments=$(jq -r ".[\"$component\"].arguments[0]" "$CONFIG_FILE")
 
     run_component_benchmark "$component" "$datasets" "$script" "$arguments" "$threads"
