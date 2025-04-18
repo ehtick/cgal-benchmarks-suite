@@ -44,7 +44,7 @@ move_component_results() {
 
         # Move JSON results
         if [ -d "$component_temp_dir/json_results" ] && [ "$(ls -A $component_temp_dir/json_results)" ]; then
-            mv "$component_temp_dir/json_results/"* "$Output_directory/json_results/$component/"
+            mv "$component_temp_dir/json_results/"* "$Output_directory/json_results/"
         fi
 
         rm -rf "$component_temp_dir"
@@ -80,7 +80,7 @@ run_component_benchmark() {
     done
 
     echo ">>> Starting benchmark for $component with $threads threads"
-    docker run -d --rm --replace \
+    docker run -d --rm \
         --name "cgal-benchmark-$component" \
         -v "$TEMP_DIR/$component:/app/benchmark:z" \
         $volume_mounts \
@@ -151,7 +151,7 @@ launch_container() {
     local component=$1
     local threads=$2
     local datasets=$(jq -r ".[\"$component\"].datasets[]" "$CONFIG_FILE" | tr '\n' ',')
-    local script=$(jq -r ".[\"$component\"].scripts" "$CONFIG_FILE")
+    local script=$(jq -r ".[\"$component\"].script" "$CONFIG_FILE")
     local arguments=$(jq -r ".[\"$component\"].arguments[0]" "$CONFIG_FILE")
 
     run_component_benchmark "$component" "$datasets" "$script" "$arguments" "$threads"
