@@ -70,7 +70,7 @@ if [ -f "$BENCHMARK_SCRIPT" ]; then
 
     echo "=== [ GENERATING METRICS JSON ] ==="
     python3 "/app/scripts/Alpha_wrap_3/Alpha_wrap_3_processor.py" \
-        --json-output "/app/benchmark/json_results/Alpha_wrap_3_results.json" \
+        --json-output "/app/benchmark/json_results/Alpha_wrap_3_results" \
         --output-dir "$output_dir" \
         --input-folder "$input_path"
 
